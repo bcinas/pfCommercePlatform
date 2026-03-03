@@ -3,6 +3,8 @@ import mongoose from 'mongoose'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './routes/authRoutes'
+import categoryRoutes from './routes/categoryRoutes'
+import productRoutes from './routes/productRoutes'
 
 dotenv.config()
 
@@ -19,6 +21,8 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes)
+app.use('/api/categories', categoryRoutes)
+app.use('/api/products', productRoutes)
 
 // Database connection
 const PORT = process.env.PORT || 5000
