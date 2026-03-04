@@ -1,4 +1,4 @@
-import type { ICategory, IProduct, IProductResponse, IReview } from '@/app/types';
+import type { ICategory, IProduct, IProductResponse, IReview, IOrder, IShippingAddress } from '@/app/types';
 
 const BASE_URL = 'http://localhost:5000/api';
 
@@ -37,6 +37,40 @@ export async function fetchProductReviews(productId: string): Promise<IReview[]>
   if (!res.ok) throw new Error('Failed to fetch reviews');
   const data: IReview[] = await res.json();
   return data;
+}
+
+export interface OrderItemInput {
+  productId: string;
+  quantity: number;
+}
+
+function authHeaders(token: string): HeadersInit {
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+}
+
+export async function createOrder(
+  token: string,
+  items: OrderItemInput[],
+  shippingAddress: IShippingAddress
+): Promise<IOrder> {
+  const res = await fetch(`${BASE_URL}/orders`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ items, shippingAddress }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? 'Failed to create order');
+  }
+  return res.json() as Promise<IOrder>;
+}
+
+export async function fetchOrderById(token: string, id: string): Promise<IOrder> {
+  const res = await fetch(`${BASE_URL}/orders/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error('Failed to fetch order');
+  return res.json() as Promise<IOrder>;
 }
 
 export async function fetchProducts(params?: ProductParams): Promise<IProductResponse> {

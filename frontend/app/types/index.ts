@@ -45,3 +45,33 @@ export interface IReview {
   comment: string;
   createdAt: string;
 }
+
+export interface IShippingAddress {
+  fullName: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface IOrderItem {
+  product: string;
+  name: string;
+  image: string;
+  price: number;
+  quantity: number;
+}
+
+export interface IOrder {
+  _id: string;
+  user: string | { _id: string; name: string; email: string };
+  items: IOrderItem[];
+  shippingAddress: IShippingAddress;
+  paymentStatus: 'pending' | 'paid';
+  orderStatus: 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  itemsPrice: number;
+  shippingPrice: number;
+  taxPrice: number;
+  totalPrice: number;
+  createdAt: string;
+}
