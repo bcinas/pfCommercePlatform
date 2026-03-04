@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import type { IProduct } from '@/app/types';
+import { useCart } from '@/app/context/CartContext';
 
 const BACKEND_URL = 'http://localhost:5000';
 
@@ -27,12 +29,13 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { addToCart } = useCart();
   const imageSrc = product.images[0] ? `${BACKEND_URL}${product.images[0]}` : null;
   const categoryName =
     typeof product.category === 'string' ? null : product.category.name;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+    <Link href={`/products/${product._id}`} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
       {/* Image area */}
       <div className="relative w-full h-44 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex-shrink-0">
         {imageSrc ? (
@@ -87,13 +90,13 @@ export default function ProductCard({ product }: ProductCardProps) {
             ${product.price.toFixed(2)}
           </span>
           <button
-            onClick={() => console.log('Add to cart:', product._id)}
+            onClick={(e) => { e.preventDefault(); addToCart(product, 1); }}
             className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
           >
             Add to Cart
           </button>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

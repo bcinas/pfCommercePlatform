@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/app/context/AuthContext';
+import { useCart } from '@/app/context/CartContext';
 
 export default function Header() {
   const { user, loading, logout } = useAuth();
+  const { items } = useCart();
+  const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -45,9 +48,10 @@ export default function Header() {
           {/* Right — cart + auth */}
           <div className="flex items-center gap-2">
             {/* Cart icon */}
-            <button
+            <Link
+              href="/cart"
               className="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label="Shopping cart"
+              aria-label={`Shopping cart, ${cartCount} item${cartCount !== 1 ? 's' : ''}`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -57,10 +61,12 @@ export default function Header() {
                   d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                 />
               </svg>
-              <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none px-0.5">
-                0
-              </span>
-            </button>
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none px-0.5">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
+            </Link>
 
             {/* Auth section */}
             <div className="hidden sm:flex items-center gap-2 ml-1 min-w-[9rem] justify-end">

@@ -1,4 +1,4 @@
-import type { ICategory, IProductResponse } from '@/app/types';
+import type { ICategory, IProduct, IProductResponse, IReview } from '@/app/types';
 
 const BASE_URL = 'http://localhost:5000/api';
 
@@ -23,6 +23,20 @@ export async function fetchCategories(): Promise<ICategory[]> {
 export async function fetchCategoryBySlug(slug: string): Promise<ICategory | null> {
   const categories = await fetchCategories();
   return categories.find((c) => c.slug === slug) ?? null;
+}
+
+export async function fetchProductById(id: string): Promise<IProduct> {
+  const res = await fetch(`${BASE_URL}/products/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch product');
+  const data: IProduct = await res.json();
+  return data;
+}
+
+export async function fetchProductReviews(productId: string): Promise<IReview[]> {
+  const res = await fetch(`${BASE_URL}/products/${productId}/reviews`);
+  if (!res.ok) throw new Error('Failed to fetch reviews');
+  const data: IReview[] = await res.json();
+  return data;
 }
 
 export async function fetchProducts(params?: ProductParams): Promise<IProductResponse> {
