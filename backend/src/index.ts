@@ -5,6 +5,8 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/authRoutes'
 import categoryRoutes from './routes/categoryRoutes'
 import productRoutes from './routes/productRoutes'
+import orderRoutes from './routes/orderRoutes'
+import adminRoutes from './routes/adminRoutes'
 
 dotenv.config()
 
@@ -23,6 +25,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/categories', categoryRoutes)
 app.use('/api/products', productRoutes)
+app.use('/api/orders', orderRoutes)
+app.use('/api/admin', adminRoutes)
 
 // Database connection
 const PORT = process.env.PORT || 5000
