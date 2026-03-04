@@ -1,4 +1,5 @@
 import { Response } from 'express'
+import { type SortOrder } from 'mongoose'
 import Order from '../models/Order'
 import User from '../models/User'
 import Product from '../models/Product'
@@ -170,6 +171,58 @@ export const getStats = async (req: AuthRequest, res: Response) => {
   }
 }
 
+// GET /api/admin/products
+export const getAllProducts = async (req: AuthRequest, res: Response) => {
+  try {
+    const { category, isActive, search, page, limit, sort } = req.query as Record<string, string | undefined>
+
+    const filter: Record<string, unknown> = {}
+
+    if (category) filter.category = category
+    if (isActive !== undefined) filter.isActive = isActive === 'true'
+    if (search) filter.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+    ]
+
+    const sortMap: Record<string, Record<string, SortOrder>> = {
+      price_asc:  { price: 1 },
+      price_desc: { price: -1 },
+      name_asc:   { name: 1 },
+      name_desc:  { name: -1 },
+      newest:     { createdAt: -1 },
+      oldest:     { createdAt: 1 },
+    }
+    const sortQuery: Record<string, SortOrder> = sortMap[sort ?? ''] ?? { createdAt: -1 }
+
+    const currentPage = Math.max(1, parseInt(page ?? '1', 10))
+    const perPage = Math.max(1, parseInt(limit ?? '20', 10))
+    const skip = (currentPage - 1) * perPage
+
+    const [products, totalProducts] = await Promise.all([
+      Product.find(filter)
+        .populate('category', 'name')
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(perPage),
+      Product.countDocuments(filter),
+    ])
+
+    res.json({
+      products,
+      pagination: {
+        currentPage,
+        totalPages: Math.ceil(totalProducts / perPage),
+        totalProducts,
+        limit: perPage,
+      },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Server error'
+    res.status(500).json({ message })
+  }
+}
+
 // PATCH /api/admin/products/:id/stock
 export const updateProductStock = async (req: AuthRequest, res: Response) => {
   try {
@@ -202,6 +255,62 @@ export const updateProductStock = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Server error'
     res.status(500).json({ message })
+  }
+}
+
+// PATCH /api/admin/orders/:id/status
+export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const validStatuses = ['processing', 'shipped', 'delivered', 'cancelled']
+    const { orderStatus } = req.body as { orderStatus: unknown }
+
+    if (!orderStatus) {
+      return res.status(400).json({ message: 'orderStatus is required' })
+    }
+
+    if (typeof orderStatus !== 'string' || !validStatuses.includes(orderStatus)) {
+      return res.status(400).json({ message: `Invalid orderStatus. Must be one of: ${validStatuses.join(', ')}` })
+    }
+
+    const order = await Order.findById(req.params.id)
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' })
+    }
+
+    order.orderStatus = orderStatus as 'processing' | 'shipped' | 'delivered' | 'cancelled'
+    await order.save()
+
+    res.json({
+      success: true,
+      message: `Order status updated to ${orderStatus}`,
+      order: {
+        _id: order._id,
+        orderStatus: order.orderStatus,
+        updatedAt: (order as unknown as { updatedAt: Date }).updatedAt,
+      },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Server error'
+    const status = message.includes('Cast to ObjectId') ? 400 : 500
+    res.status(status).json({ message })
+  }
+}
+
+// GET /api/admin/orders/:id
+export const getOrderById = async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email')
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' })
+    }
+
+    res.json({ order })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Server error'
+    const status = message.includes('Cast to ObjectId') ? 400 : 500
+    res.status(status).json({ message })
   }
 }
 

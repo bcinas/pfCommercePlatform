@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import Product from '../models/Product'
+import Review from '../models/Review'
 
 // GET /api/products — public
 export const getProducts = async (req: Request, res: Response) => {
@@ -97,6 +98,18 @@ export const deleteProduct = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Product not found' })
     }
     res.json({ message: 'Product deleted' })
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// GET /api/products/:id/reviews — public
+export const getProductReviews = async (req: Request, res: Response) => {
+  try {
+    const reviews = await Review.find({ product: req.params.id })
+      .populate('user', 'name')
+      .sort({ createdAt: -1 })
+    res.json(reviews)
   } catch (error) {
     res.status(500).json({ message: 'Server error' })
   }

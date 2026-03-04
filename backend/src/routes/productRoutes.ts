@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   getProducts,
   getProductById,
+  getProductReviews,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -16,6 +17,7 @@ router.get('/admin/all', protect, adminOnly, getAdminProducts)
 
 // Public
 router.get('/', getProducts)
+router.get('/:id/reviews', getProductReviews)
 router.get('/:id', getProductById)
 
 // Admin-only mutations
