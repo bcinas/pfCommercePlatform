@@ -39,6 +39,7 @@ const EMPTY_FORM: ProductFormData = {
   category: '',
   images: [],
   isActive: true,
+  specifications: [],
 };
 
 // ─── Product Modal ────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ function ProductModal({
           category: product.category?._id ?? '',
           images: product.images,
           isActive: product.isActive,
+          specifications: product.specifications ?? [],
         }
       : EMPTY_FORM,
   );
@@ -189,6 +191,62 @@ function ProductModal({
               placeholder="/images/product-1.jpg, /images/product-2.jpg"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Specifications
+            </label>
+            <div className="space-y-2">
+              {form.specifications.map((spec, i) => (
+                <div key={i} className="grid grid-cols-2 gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Key"
+                    value={spec.key}
+                    onChange={(e) => {
+                      const updated = form.specifications.map((s, idx) =>
+                        idx === i ? { ...s, key: e.target.value } : s,
+                      );
+                      set('specifications', updated);
+                    }}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  />
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder="Value"
+                      value={spec.value}
+                      onChange={(e) => {
+                        const updated = form.specifications.map((s, idx) =>
+                          idx === i ? { ...s, value: e.target.value } : s,
+                        );
+                        set('specifications', updated);
+                      }}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        set('specifications', form.specifications.filter((_, idx) => idx !== i));
+                      }}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                set('specifications', [...form.specifications, { key: '', value: '' }])
+              }
+              className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+            >
+              + Add Specification
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -357,7 +415,7 @@ export default function AdminProductsPage() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive' | 'out-of-stock'>('all');
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -386,7 +444,8 @@ export default function AdminProductsPage() {
       const matchActive =
         filterActive === 'all' ||
         (filterActive === 'active' && p.isActive && p.stock > 0) ||
-        (filterActive === 'inactive' && (!p.isActive || p.stock === 0));
+        (filterActive === 'inactive' && !p.isActive) ||
+        (filterActive === 'out-of-stock' && p.stock === 0);
       return matchSearch && matchActive;
     });
   }, [products, search, filterActive]);
@@ -441,7 +500,14 @@ export default function AdminProductsPage() {
     try {
       if (editingProduct) {
         const updated = await updateProduct(editingProduct._id, data);
-        setProducts((prev) => prev.map((p) => (p._id === editingProduct._id ? updated : p)));
+        const categoryObj = categories.find((c) => c._id === data.category);
+        const merged: AdminProduct = {
+          ...updated,
+          category: categoryObj
+            ? { _id: categoryObj._id, name: categoryObj.name }
+            : updated.category,
+        };
+        setProducts((prev) => prev.map((p) => (p._id === editingProduct._id ? merged : p)));
       } else {
         const created = await createProduct(data);
         setProducts((prev) => [created, ...prev]);
@@ -506,43 +572,34 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* Summary badges */}
+      {/* Filter chips + Search */}
       {!loading && (
-        <div className="flex flex-wrap gap-3 mb-5">
-          {[
-            { label: 'Total', count: totalCount, color: 'bg-gray-100 text-gray-700' },
-            { label: 'Active', count: activeCount, color: 'bg-green-100 text-green-700' },
-            { label: 'Inactive', count: inactiveCount, color: 'bg-gray-100 text-gray-500' },
-            { label: 'Out of Stock', count: outOfStockCount, color: 'bg-red-100 text-red-700' },
-          ].map(({ label, count, color }) => (
-            <span key={label} className={`text-sm font-medium px-3 py-1 rounded-full ${color}`}>
-              {label}: {count}
-            </span>
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+          {(
+            [
+              { value: 'all', label: 'All', count: totalCount, active: 'bg-gray-800 text-white', inactive: 'bg-gray-100 text-gray-600 hover:bg-gray-200' },
+              { value: 'active', label: 'Active', count: activeCount, active: 'bg-green-600 text-white', inactive: 'bg-green-50 text-green-700 hover:bg-green-100' },
+              { value: 'inactive', label: 'Inactive', count: inactiveCount, active: 'bg-gray-500 text-white', inactive: 'bg-gray-100 text-gray-500 hover:bg-gray-200' },
+              { value: 'out-of-stock', label: 'Out of Stock', count: outOfStockCount, active: 'bg-red-600 text-white', inactive: 'bg-red-50 text-red-700 hover:bg-red-100' },
+            ] as const
+          ).map(({ value, label, count, active, inactive }) => (
+            <button
+              key={value}
+              onClick={() => setFilterActive(value)}
+              className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors ${filterActive === value ? active : inactive}`}
+            >
+              {label} <span className="opacity-75">({count})</span>
+            </button>
           ))}
+          <input
+            type="text"
+            placeholder="Search products…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="ml-auto border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-64"
+          />
         </div>
       )}
-
-      {/* Search + Filter */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input
-          type="text"
-          placeholder="Search products…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-64"
-        />
-        <select
-          value={filterActive}
-          onChange={(e) =>
-            setFilterActive(e.target.value as 'all' | 'active' | 'inactive')
-          }
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive / Out of Stock</option>
-        </select>
-      </div>
 
       {/* Bulk actions */}
       {selected.size > 0 && (

@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
-import { fetchMyOrders, updateProfile } from '@/app/lib/api';
+import { fetchMyOrders, updateProfile, cancelOrder } from '@/app/lib/api';
 import type { IOrder } from '@/app/types';
 
 const STATUS_STYLES: Record<IOrder['orderStatus'], string> = {
@@ -64,6 +64,7 @@ export default function ProfilePage() {
   const [orders, setOrders]               = useState<IOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError]     = useState<string | null>(null);
+  const [cancellingId, setCancellingId]   = useState<string | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -126,6 +127,20 @@ export default function ProfilePage() {
       setFeedback({ type: 'error', msg: err instanceof Error ? err.message : 'Update failed' });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCancelOrder(e: React.MouseEvent, orderId: string) {
+    e.stopPropagation();
+    if (!user) return;
+    setCancellingId(orderId);
+    try {
+      const updated = await cancelOrder(user.token, orderId);
+      setOrders((prev) => prev.map((o) => (o._id === orderId ? updated : o)));
+    } catch (err) {
+      setOrdersError(err instanceof Error ? err.message : 'Failed to cancel order');
+    } finally {
+      setCancellingId(null);
     }
   }
 
@@ -342,9 +357,20 @@ export default function ProfilePage() {
                         ${order.totalPrice.toFixed(2)}
                       </td>
                       <td className="py-3.5 px-2 pl-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_STYLES[order.orderStatus]}`}>
-                          {order.orderStatus}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_STYLES[order.orderStatus]}`}>
+                            {order.orderStatus}
+                          </span>
+                          {order.orderStatus === 'processing' && (
+                            <button
+                              onClick={(e) => handleCancelOrder(e, order._id)}
+                              disabled={cancellingId === order._id}
+                              className="text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-60 transition-colors"
+                            >
+                              {cancellingId === order._id ? 'Cancelling…' : 'Cancel'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

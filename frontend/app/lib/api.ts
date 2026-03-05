@@ -101,6 +101,18 @@ export async function updateProfile(token: string, data: UpdateProfileInput): Pr
   return res.json() as Promise<AuthUserResponse>;
 }
 
+export async function cancelOrder(token: string, id: string): Promise<IOrder> {
+  const res = await fetch(`${BASE_URL}/orders/${id}/cancel`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? 'Failed to cancel order');
+  }
+  return res.json() as Promise<IOrder>;
+}
+
 export async function fetchMyOrders(token: string): Promise<IOrder[]> {
   const res = await fetch(`${BASE_URL}/orders/my`, {
     headers: authHeaders(token),

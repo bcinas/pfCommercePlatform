@@ -14,6 +14,7 @@ export interface AdminProduct {
   rating: number;
   numReviews: number;
   createdAt: string;
+  specifications: { key: string; value: string }[];
 }
 
 export interface AdminCategory {
@@ -99,6 +100,7 @@ export interface ProductFormData {
   category: string;
   images: string[];
   isActive: boolean;
+  specifications: { key: string; value: string }[];
 }
 
 export interface CategoryFormData {
@@ -112,7 +114,7 @@ export interface CategoryFormData {
 export function getAuthHeaders(): Record<string, string> {
   const base: Record<string, string> = { 'Content-Type': 'application/json' };
   if (typeof window === 'undefined') return base;
-  const stored = localStorage.getItem('pf_auth_user');
+  const stored = sessionStorage.getItem('pf_auth_user');
   if (!stored) return base;
   try {
     const { token } = JSON.parse(stored) as { token: string };

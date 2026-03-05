@@ -83,6 +83,32 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
   }
 }
 
+// PATCH /api/orders/:id/cancel — protected, owner only, only if processing
+export const cancelOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await Order.findById(req.params.id)
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' })
+    }
+
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to cancel this order' })
+    }
+
+    if (order.orderStatus !== 'processing') {
+      return res.status(400).json({ message: 'Only orders in processing status can be cancelled' })
+    }
+
+    order.orderStatus = 'cancelled'
+    await order.save()
+
+    res.json(order)
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
 // GET /api/orders/:id — protected, owner or admin
 export const getOrderById = async (req: AuthRequest, res: Response) => {
   try {
