@@ -23,7 +23,7 @@ A full-stack e-commerce platform built as a 5-day case study. Features a custome
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS v4 |
-| UI components | shadcn/ui, Radix UI primitives, Lucide React, Recharts |
+| UI components | Lucide React, Recharts |
 | Backend | Express 5, TypeScript |
 | Database | MongoDB with Mongoose 9 |
 | Auth | JSON Web Tokens (bcryptjs + jsonwebtoken) |
@@ -417,9 +417,8 @@ npm start       # starts production server on port 3000
 pfCommercePlatform/
 ├── backend/
 │   └── src/
-│       ├── index.ts              # Express entry point
+│       ├── index.ts              # Express entry point + DB connection
 │       ├── seed.ts               # Database seeder
-│       ├── config/               # DB connection
 │       ├── controllers/          # Route handlers
 │       ├── middleware/           # JWT auth middleware (protect, adminOnly)
 │       ├── models/               # Mongoose schemas (User, Product, Category, Order, Review)
@@ -428,15 +427,13 @@ pfCommercePlatform/
     └── app/
         ├── page.tsx              # Homepage
         ├── layout.tsx            # Root layout with Header and Footer
-        ├── globals.css           # Global styles (Tailwind v4 + shadcn tokens)
+        ├── globals.css           # Global styles (Tailwind v4)
         ├── lib/
         │   ├── api.ts            # Public API client
-        │   ├── adminApi.ts       # Admin API client
-        │   └── admin-data.ts     # Admin TypeScript types and utility functions
+        │   └── adminApi.ts       # Admin API client
         ├── types/index.ts        # Shared frontend TypeScript types
         ├── context/              # AuthContext, CartContext
-        ├── components/           # Shared UI components
-        │   └── admin/            # Admin-specific components (sidebar, charts, tables)
+        ├── components/           # Header, ProductCard, ProductListView
         ├── admin/                # Admin pages (dashboard, products, categories, orders)
         ├── products/             # Product listing and detail pages
         ├── categories/           # Categories grid page
