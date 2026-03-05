@@ -105,6 +105,13 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
     order.orderStatus = 'cancelled'
     await order.save()
 
+    // Restore stock for each cancelled item
+    await Promise.all(
+      order.items.map((item) =>
+        Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
+      )
+    )
+
     res.json(order)
   } catch (error) {
     res.status(500).json({ message: 'Server error' })

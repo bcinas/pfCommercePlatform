@@ -14,12 +14,13 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body
 
-    const existingUser = await User.findOne({ email })
+    const normalizedEmail = typeof email === 'string' ? email.toLowerCase().trim() : email
+    const existingUser = await User.findOne({ email: normalizedEmail })
     if (existingUser) {
       return res.status(400).json({ message: 'Email already in use' })
     }
 
-    const user = await User.create({ name, email, password })
+    const user = await User.create({ name, email: normalizedEmail, password })
 
     res.status(201).json({
       _id: user._id,
@@ -96,7 +97,7 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body
 
-    const user = await User.findOne({ email })
+    const user = await User.findOne({ email: typeof email === 'string' ? email.toLowerCase().trim() : email })
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' })
     }
