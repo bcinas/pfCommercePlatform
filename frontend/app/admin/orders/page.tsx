@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useEffect, useState, Fragment } from 'react';
 import { fetchAdminOrders, updateOrderStatus, type AdminOrder } from '@/app/lib/adminApi';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -204,9 +203,8 @@ export default function AdminOrdersPage() {
                   </tr>
                 ) : (
                   orders.map((order) => (
-                    <>
+                    <Fragment key={order._id}>
                       <tr
-                        key={order._id}
                         className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
                         onClick={() => toggleExpand(order._id)}
                       >
@@ -266,13 +264,13 @@ export default function AdminOrdersPage() {
                         </td>
                       </tr>
                       {expandedId === order._id && (
-                        <tr key={`${order._id}-detail`}>
+                        <tr>
                           <td colSpan={9} className="p-0">
                             <OrderDetail order={order} />
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))
                 )}
               </tbody>

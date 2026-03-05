@@ -53,6 +53,22 @@ export interface AdminOrder {
   createdAt: string;
 }
 
+// Shapes specific to what GET /api/admin/stats returns
+export interface StatsRecentOrder {
+  _id: string;
+  customerName: string;
+  total: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface StatsPopularProduct {
+  productId: string;
+  name: string;
+  timesOrdered: number;
+  revenue: number;
+}
+
 export interface OrderStatusDistribution {
   processing: number;
   shipped: number;
@@ -69,8 +85,8 @@ export interface AdminStats {
   totalSales: number;
   totalOrders: number;
   totalCustomers: number;
-  recentOrders: AdminOrder[];
-  popularProducts: AdminProduct[];
+  recentOrders: StatsRecentOrder[];
+  popularProducts: StatsPopularProduct[];
   orderStatusDistribution: OrderStatusDistribution;
   salesTrends: SalesTrend[];
 }
@@ -83,6 +99,12 @@ export interface ProductFormData {
   category: string;
   images: string[];
   isActive: boolean;
+}
+
+export interface CategoryFormData {
+  name: string;
+  slug: string;
+  image: string;
 }
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
@@ -125,45 +147,82 @@ export function fetchAdminStats(): Promise<AdminStats> {
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
-export function fetchAdminOrders(): Promise<AdminOrder[]> {
-  return request<AdminOrder[]>('/admin/orders');
+interface OrdersResponse {
+  orders: AdminOrder[];
+  pagination: { currentPage: number; totalPages: number; totalOrders: number; limit: number };
 }
 
-export function fetchAdminOrder(id: string): Promise<AdminOrder> {
-  return request<AdminOrder>(`/admin/orders/${id}`);
+export async function fetchAdminOrders(): Promise<AdminOrder[]> {
+  const data = await request<OrdersResponse>('/admin/orders');
+  return data.orders;
 }
 
-export function updateOrderStatus(
+export async function fetchAdminOrder(id: string): Promise<AdminOrder> {
+  const data = await request<{ order: AdminOrder }>(`/admin/orders/${id}`);
+  return data.order;
+}
+
+interface UpdateOrderStatusResponse {
+  success: boolean;
+  message: string;
+  order: { _id: string; orderStatus: AdminOrder['orderStatus']; updatedAt: string };
+}
+
+export async function updateOrderStatus(
   id: string,
   orderStatus: AdminOrder['orderStatus'],
-): Promise<AdminOrder> {
-  return request<AdminOrder>(`/admin/orders/${id}/status`, {
+): Promise<{ _id: string; orderStatus: AdminOrder['orderStatus'] }> {
+  const data = await request<UpdateOrderStatusResponse>(`/admin/orders/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ orderStatus }),
   });
+  return data.order;
 }
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
-export function fetchAdminProducts(): Promise<AdminProduct[]> {
-  return request<AdminProduct[]>('/admin/products');
+interface ProductsResponse {
+  products: AdminProduct[];
+  pagination: { currentPage: number; totalPages: number; totalProducts: number; limit: number };
 }
 
-export function updateProductStock(id: string, stockQuantity: number): Promise<AdminProduct> {
-  return request<AdminProduct>(`/admin/products/${id}/stock`, {
+export async function fetchAdminProducts(): Promise<AdminProduct[]> {
+  const data = await request<ProductsResponse>('/admin/products');
+  return data.products;
+}
+
+interface UpdateStockResponse {
+  success: boolean;
+  message: string;
+  product: { _id: string; name: string; stock: number; isActive: boolean };
+}
+
+export async function updateProductStock(
+  id: string,
+  stockQuantity: number,
+): Promise<{ _id: string; stock: number; isActive: boolean }> {
+  const data = await request<UpdateStockResponse>(`/admin/products/${id}/stock`, {
     method: 'PATCH',
     body: JSON.stringify({ stockQuantity }),
   });
+  return data.product;
 }
 
-export function bulkUpdateProducts(
+interface BulkUpdateResponse {
+  success: boolean;
+  message: string;
+  modifiedCount: number;
+}
+
+export async function bulkUpdateProducts(
   productIds: string[],
   isActive: boolean,
-): Promise<{ updated: number }> {
-  return request<{ updated: number }>('/admin/products/bulk-update', {
+): Promise<{ modifiedCount: number }> {
+  const data = await request<BulkUpdateResponse>('/admin/products/bulk-update', {
     method: 'PATCH',
     body: JSON.stringify({ productIds, isActive }),
   });
+  return { modifiedCount: data.modifiedCount };
 }
 
 export function createProduct(data: ProductFormData): Promise<AdminProduct> {
@@ -190,12 +249,6 @@ export function deleteProduct(id: string): Promise<{ message: string }> {
 
 export function fetchAdminCategories(): Promise<AdminCategory[]> {
   return request<AdminCategory[]>('/categories');
-}
-
-export interface CategoryFormData {
-  name: string;
-  slug: string;
-  image: string;
 }
 
 export function createCategory(data: CategoryFormData): Promise<AdminCategory> {

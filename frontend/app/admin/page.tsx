@@ -16,8 +16,8 @@ import {
 import {
   fetchAdminStats,
   type AdminStats,
-  type AdminOrder,
-  type AdminProduct,
+  type StatsRecentOrder,
+  type StatsPopularProduct,
 } from '@/app/lib/adminApi';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -40,32 +40,23 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-function getOrderStatusClass(status: AdminOrder['orderStatus']) {
-  const map: Record<AdminOrder['orderStatus'], string> = {
+function getRecentOrderStatusClass(status: string) {
+  const map: Record<string, string> = {
     processing: 'bg-amber-100 text-amber-700',
     shipped: 'bg-blue-100 text-blue-700',
     delivered: 'bg-green-100 text-green-700',
     cancelled: 'bg-red-100 text-red-700',
   };
-  return map[status];
+  return map[status] ?? 'bg-gray-100 text-gray-700';
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({
-  title,
-  value,
-  sub,
-}: {
-  title: string;
-  value: string;
-  sub?: string;
-}) {
+function StatCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
       <p className="text-gray-500 text-sm">{title}</p>
       <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-      {sub && <p className="text-gray-400 text-xs mt-1">{sub}</p>}
     </div>
   );
 }
@@ -80,12 +71,7 @@ function SkeletonCard() {
 }
 
 function ChartSkeleton({ height = 200 }: { height?: number }) {
-  return (
-    <div
-      className="bg-gray-100 rounded-lg animate-pulse"
-      style={{ height }}
-    />
-  );
+  return <div className="bg-gray-100 rounded-lg animate-pulse" style={{ height }} />;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -181,7 +167,11 @@ export default function AdminDashboardPage() {
                         ? ([formatCurrency(v), 'Sales'] as [string, string])
                         : ([String(v ?? ''), 'Sales'] as [string, string])
                     }
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '12px',
+                    }}
                   />
                   <Area
                     type="monotone"
@@ -222,7 +212,11 @@ export default function AdminDashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        fontSize: '12px',
+                      }}
                     />
                   </PieChart>
                 </div>
@@ -260,32 +254,21 @@ export default function AdminDashboardPage() {
             </div>
           ) : stats?.popularProducts.length ? (
             <div className="space-y-4">
-              {stats.popularProducts.map((product: AdminProduct, index: number) => {
-                const stockClass =
-                  product.stock === 0
-                    ? 'bg-red-100 text-red-700'
-                    : product.stock < 10
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-green-100 text-green-700';
-                return (
-                  <div key={product._id} className="flex items-start gap-3">
-                    <span className="text-gray-400 text-sm font-medium w-5 shrink-0 mt-0.5">
-                      #{index + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-900 text-sm font-medium truncate">
-                        {product.name}
-                      </p>
-                      <p className="text-gray-500 text-xs">{formatCurrency(product.price)}</p>
-                    </div>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${stockClass}`}
-                    >
-                      {product.stock === 0 ? 'Out' : product.stock}
-                    </span>
+              {stats.popularProducts.map((product: StatsPopularProduct, index: number) => (
+                <div key={product.productId} className="flex items-start gap-3">
+                  <span className="text-gray-400 text-sm font-medium w-5 shrink-0 mt-0.5">
+                    #{index + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-900 text-sm font-medium truncate">
+                      {product.name}
+                    </p>
+                    <p className="text-gray-500 text-xs">
+                      {product.timesOrdered} ordered · {formatCurrency(product.revenue)} revenue
+                    </p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           ) : (
             <p className="text-gray-400 text-sm text-center py-12">No products yet</p>
@@ -304,7 +287,6 @@ export default function AdminDashboardPage() {
               <div key={i} className="animate-pulse flex gap-6">
                 <div className="h-4 bg-gray-200 rounded w-20" />
                 <div className="h-4 bg-gray-200 rounded w-28" />
-                <div className="h-4 bg-gray-200 rounded w-12" />
                 <div className="h-4 bg-gray-200 rounded w-16 ml-auto" />
               </div>
             ))}
@@ -316,14 +298,13 @@ export default function AdminDashboardPage() {
                 <tr className="border-b border-gray-100">
                   <th className="text-left px-6 py-3 text-gray-500 font-medium">Order ID</th>
                   <th className="text-left px-6 py-3 text-gray-500 font-medium">Customer</th>
-                  <th className="text-left px-6 py-3 text-gray-500 font-medium">Items</th>
                   <th className="text-left px-6 py-3 text-gray-500 font-medium">Total</th>
                   <th className="text-left px-6 py-3 text-gray-500 font-medium">Status</th>
                   <th className="text-left px-6 py-3 text-gray-500 font-medium">Date</th>
                 </tr>
               </thead>
               <tbody>
-                {stats.recentOrders.slice(0, 5).map((order: AdminOrder) => (
+                {stats.recentOrders.slice(0, 5).map((order: StatsRecentOrder) => (
                   <tr
                     key={order._id}
                     className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
@@ -331,16 +312,15 @@ export default function AdminDashboardPage() {
                     <td className="px-6 py-4 font-mono text-gray-600 text-xs">
                       {order._id.slice(-8).toUpperCase()}
                     </td>
-                    <td className="px-6 py-4 text-gray-900">{order.user?.name ?? '—'}</td>
-                    <td className="px-6 py-4 text-gray-600">{order.items.length}</td>
+                    <td className="px-6 py-4 text-gray-900">{order.customerName}</td>
                     <td className="px-6 py-4 text-gray-900 font-medium">
-                      {formatCurrency(order.totalPrice)}
+                      {formatCurrency(order.total)}
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getOrderStatusClass(order.orderStatus)}`}
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getRecentOrderStatusClass(order.status)}`}
                       >
-                        {order.orderStatus}
+                        {order.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-500">
