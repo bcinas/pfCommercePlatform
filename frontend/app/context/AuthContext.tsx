@@ -19,6 +19,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Call after a successful profile update to keep localStorage + state in sync */
+  updateUser: (updated: ApiAuthResponse) => void;
 }
 
 interface ApiAuthResponse {
@@ -106,8 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  function updateUser(data: ApiAuthResponse) {
+    persistUser(data);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -73,6 +73,42 @@ export async function fetchOrderById(token: string, id: string): Promise<IOrder>
   return res.json() as Promise<IOrder>;
 }
 
+export interface UpdateProfileInput {
+  name?: string;
+  email?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export interface AuthUserResponse {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  token: string;
+}
+
+export async function updateProfile(token: string, data: UpdateProfileInput): Promise<AuthUserResponse> {
+  const res = await fetch(`${BASE_URL}/auth/profile`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? 'Failed to update profile');
+  }
+  return res.json() as Promise<AuthUserResponse>;
+}
+
+export async function fetchMyOrders(token: string): Promise<IOrder[]> {
+  const res = await fetch(`${BASE_URL}/orders/my`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json() as Promise<IOrder[]>;
+}
+
 export async function fetchProducts(params?: ProductParams): Promise<IProductResponse> {
   const searchParams = new URLSearchParams();
 

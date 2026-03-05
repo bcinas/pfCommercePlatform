@@ -75,9 +75,12 @@ export default function Header() {
                 <div className="h-8 w-36 bg-gray-100 rounded-lg animate-pulse" />
               ) : user ? (
                 <>
-                  <span className="text-sm font-medium text-gray-700 px-2 truncate max-w-[8rem]">
+                  <Link
+                    href="/profile"
+                    className="text-sm font-medium text-gray-700 hover:text-indigo-600 px-2 truncate max-w-[8rem] transition-colors"
+                  >
                     Hi, {user.name.split(' ')[0]}
-                  </span>
+                  </Link>
                   <button
                     onClick={logout}
                     className="text-sm font-medium text-gray-700 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
