@@ -48,21 +48,20 @@ export default function ProfilePage() {
   const { user, loading, updateUser } = useAuth();
   const router = useRouter();
 
-  // ── Info form state
+  // ── Edit mode toggle
+  const [isEditing, setIsEditing] = useState(false);
+
+  // ── Edit form state
   const [name, setName]   = useState('');
   const [email, setEmail] = useState('');
-  const [infoSaving, setInfoSaving]     = useState(false);
-  const [infoFeedback, setInfoFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-
-  // ── Password form state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword]         = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [pwSaving, setPwSaving]               = useState(false);
-  const [pwFeedback, setPwFeedback]           = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [saving, setSaving]                   = useState(false);
+  const [feedback, setFeedback]               = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   // ── Orders state
-  const [orders, setOrders]           = useState<IOrder[]>([]);
+  const [orders, setOrders]               = useState<IOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError]     = useState<string | null>(null);
 
@@ -71,13 +70,23 @@ export default function ProfilePage() {
     if (!loading && !user) router.replace('/login');
   }, [user, loading, router]);
 
-  // Seed form with current user data
-  useEffect(() => {
+  // Seed form with current user data when entering edit mode
+  function enterEditMode() {
     if (user) {
       setName(user.name);
       setEmail(user.email);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setFeedback(null);
     }
-  }, [user]);
+    setIsEditing(true);
+  }
+
+  function cancelEdit() {
+    setIsEditing(false);
+    setFeedback(null);
+  }
 
   // Fetch orders
   useEffect(() => {
@@ -91,42 +100,32 @@ export default function ProfilePage() {
       .finally(() => setOrdersLoading(false));
   }, [user]);
 
-  async function handleInfoSave(e: FormEvent<HTMLFormElement>) {
+  async function handleSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user) return;
-    setInfoFeedback(null);
-    setInfoSaving(true);
-    try {
-      const updated = await updateProfile(user.token, { name, email });
-      updateUser(updated);
-      setInfoFeedback({ type: 'success', msg: 'Profile updated successfully.' });
-    } catch (err) {
-      setInfoFeedback({ type: 'error', msg: err instanceof Error ? err.message : 'Update failed' });
-    } finally {
-      setInfoSaving(false);
-    }
-  }
 
-  async function handlePasswordSave(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!user) return;
-    if (newPassword !== confirmPassword) {
-      setPwFeedback({ type: 'error', msg: 'New passwords do not match.' });
+    // If the user started filling in the password section, validate it
+    if (currentPassword && newPassword !== confirmPassword) {
+      setFeedback({ type: 'error', msg: 'New passwords do not match.' });
       return;
     }
-    setPwFeedback(null);
-    setPwSaving(true);
+
+    setFeedback(null);
+    setSaving(true);
     try {
-      const updated = await updateProfile(user.token, { currentPassword, newPassword });
+      const payload: { name: string; email: string; currentPassword?: string; newPassword?: string } = { name, email };
+      if (currentPassword) {
+        payload.currentPassword = currentPassword;
+        payload.newPassword = newPassword;
+      }
+      const updated = await updateProfile(user.token, payload);
       updateUser(updated);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setPwFeedback({ type: 'success', msg: 'Password updated successfully.' });
+      setFeedback({ type: 'success', msg: 'Profile updated successfully.' });
+      setIsEditing(false);
     } catch (err) {
-      setPwFeedback({ type: 'error', msg: err instanceof Error ? err.message : 'Update failed' });
+      setFeedback({ type: 'error', msg: err instanceof Error ? err.message : 'Update failed' });
     } finally {
-      setPwSaving(false);
+      setSaving(false);
     }
   }
 
@@ -144,121 +143,145 @@ export default function ProfilePage() {
 
         {/* ── Account Info + Edit ─────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-indigo-600 font-bold text-xl">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
+
+          {/* Avatar + name/email row — always visible */}
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-indigo-600 font-bold text-xl">
+                  {user.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">{user.name}</h1>
+                <p className="text-sm text-gray-500">{user.email}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{user.name}</h1>
-              <p className="text-sm text-gray-500">{user.email}</p>
-            </div>
+
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={enterEditMode}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg px-4 py-2 transition-colors shadow-sm"
+              >
+                {/* Pencil icon */}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3.414A2 2 0 017.586 11.5L9 13z" />
+                </svg>
+                Edit
+              </button>
+            )}
           </div>
 
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Edit Profile</h2>
-          {infoFeedback && <div className="mb-4"><Feedback type={infoFeedback.type} message={infoFeedback.msg} /></div>}
+          {/* Feedback banner (shown in view mode after a successful save, or in edit mode for errors) */}
+          {feedback && <div className="mb-4"><Feedback type={feedback.type} message={feedback.msg} /></div>}
 
-          <form onSubmit={handleInfoSave} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="name">
-                Full name
-              </label>
-              <input
-                id="name"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="email">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={infoSaving || (!name.trim() && !email.trim())}
-                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {infoSaving && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-                {infoSaving ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          </form>
-        </div>
+          {/* Edit form — shown only in edit mode */}
+          {isEditing && (
+            <form onSubmit={handleSave} className="space-y-4">
+              <h2 className="text-base font-semibold text-gray-900">Edit Profile</h2>
 
-        {/* ── Change Password ─────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Change Password</h2>
-          {pwFeedback && <div className="mb-4"><Feedback type={pwFeedback.type} message={pwFeedback.msg} /></div>}
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="name">
+                  Full name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                />
+              </div>
 
-          <form onSubmit={handlePasswordSave} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="currentPassword">
-                Current password
-              </label>
-              <input
-                id="currentPassword"
-                type="password"
-                required
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="newPassword">
-                New password
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                required
-                minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="confirmPassword">
-                Confirm new password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={pwSaving || !currentPassword || !newPassword || !confirmPassword}
-                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {pwSaving && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-                {pwSaving ? 'Updating…' : 'Update password'}
-              </button>
-            </div>
-          </form>
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="email">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                />
+              </div>
+
+              {/* Change password subsection */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Change password <span className="font-normal text-gray-400">(optional)</span></p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="currentPassword">
+                      Current password
+                    </label>
+                    <input
+                      id="currentPassword"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="newPassword">
+                      New password
+                    </label>
+                    <input
+                      id="newPassword"
+                      type="password"
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      disabled={!currentPassword}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="confirmPassword">
+                      Confirm new password
+                    </label>
+                    <input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      disabled={!currentPassword}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  disabled={saving}
+                  className="text-sm font-medium text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-300 px-5 py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || !name.trim() || !email.trim()}
+                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {saving && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                  {saving ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* ── Order History ───────────────────────────────────────────────── */}
