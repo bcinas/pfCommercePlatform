@@ -113,6 +113,24 @@ export async function cancelOrder(token: string, id: string): Promise<IOrder> {
   return res.json() as Promise<IOrder>;
 }
 
+export async function createReview(
+  productId: string,
+  rating: number,
+  comment: string,
+  token: string
+): Promise<IReview> {
+  const res = await fetch(`${BASE_URL}/products/${productId}/reviews`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ rating, comment }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? 'Failed to submit review');
+  }
+  return res.json() as Promise<IReview>;
+}
+
 export async function fetchMyOrders(token: string): Promise<IOrder[]> {
   const res = await fetch(`${BASE_URL}/orders/my`, {
     headers: authHeaders(token),

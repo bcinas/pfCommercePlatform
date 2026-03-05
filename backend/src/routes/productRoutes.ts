@@ -3,6 +3,7 @@ import {
   getProducts,
   getProductById,
   getProductReviews,
+  createReview,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -18,6 +19,7 @@ router.get('/admin/all', protect, adminOnly, getAdminProducts)
 // Public
 router.get('/', getProducts)
 router.get('/:id/reviews', getProductReviews)
+router.post('/:id/reviews', protect, createReview)
 router.get('/:id', getProductById)
 
 // Admin-only mutations

@@ -9,7 +9,7 @@ router.get('/orders', protect, adminOnly, getOrders)
 router.get('/orders/:id', protect, adminOnly, getOrderById)
 router.patch('/orders/:id/status', protect, adminOnly, updateOrderStatus)
 router.get('/products', protect, adminOnly, getAllProducts)
-router.patch('/products/:id/stock', protect, adminOnly, updateProductStock)
 router.patch('/products/bulk-update', protect, adminOnly, bulkUpdateProducts)
+router.patch('/products/:id/stock', protect, adminOnly, updateProductStock)
 
 export default router

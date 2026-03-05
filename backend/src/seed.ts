@@ -3,6 +3,8 @@ import dotenv from 'dotenv'
 import User from './models/User'
 import Category from './models/Category'
 import Product from './models/Product'
+import Review from './models/Review'
+import Order from './models/Order'
 
 dotenv.config()
 
@@ -431,8 +433,10 @@ const seed = async () => {
     User.deleteMany({}),
     Category.deleteMany({}),
     Product.deleteMany({}),
+    Review.deleteMany({}),
+    Order.deleteMany({}),
   ])
-  console.log('Cleared existing User, Category, and Product documents')
+  console.log('Cleared existing User, Category, Product, Review, and Order documents')
 
   // Users — created individually so the pre-save password-hashing hook fires
   const [adminUser, customerUser] = await Promise.all(
@@ -449,6 +453,119 @@ const seed = async () => {
   const products = await Product.insertMany(buildProducts(catIds))
   console.log(`Created ${products.length} products`)
 
+  // ── Review seeding ──────────────────────────────────────────────────────────
+  const reviewerData = [
+    { name: 'Alice Morgan',  email: 'alice@test.com',  password: '123456', role: 'customer' as const },
+    { name: 'Bob Carter',    email: 'bob@test.com',    password: '123456', role: 'customer' as const },
+    { name: 'Carol Bennett', email: 'carol@test.com',  password: '123456', role: 'customer' as const },
+    { name: 'David Singh',   email: 'david@test.com',  password: '123456', role: 'customer' as const },
+  ]
+  const extraReviewers = await Promise.all(reviewerData.map((u) => User.create(u)))
+  const allReviewers = [customerUser, ...extraReviewers]
+
+  const reviewComments = [
+    'Really impressed with the quality. Would definitely buy again.',
+    'Exactly as described. Arrived quickly and well packaged.',
+    'Great value for money. Does everything I need it to.',
+    'Solid product overall. A few minor quirks but nothing deal-breaking.',
+    'Exceeded my expectations. Highly recommend to anyone looking for this.',
+    'Good quality, but the sizing runs a little small — order up.',
+    'Works perfectly out of the box. Setup was super easy.',
+    'Nice build quality. Feels premium and durable.',
+    'Happy with the purchase. Will be back for more.',
+    'Does the job well. Not flashy but very reliable.',
+  ]
+
+  const weightedRating = () => {
+    const weights = [0, 0, 1, 2, 3, 4] // index = rating; 0 unused; skews toward 3-5
+    const total = weights.reduce((a, b) => a + b, 0)
+    let r = Math.random() * total
+    for (let i = 1; i <= 5; i++) {
+      r -= weights[i]
+      if (r <= 0) return i
+    }
+    return 5
+  }
+
+  const activeProducts = products.filter((p) => p.isActive && p.stock > 0)
+  const reviewDocs: { user: mongoose.Types.ObjectId; product: mongoose.Types.ObjectId; rating: number; comment: string }[] = []
+
+  for (const product of activeProducts) {
+    const count = rnd(3, 5)
+    const shuffled = [...allReviewers].sort(() => Math.random() - 0.5).slice(0, count)
+    for (const reviewer of shuffled) {
+      reviewDocs.push({
+        user: reviewer._id as mongoose.Types.ObjectId,
+        product: product._id as mongoose.Types.ObjectId,
+        rating: weightedRating(),
+        comment: reviewComments[rnd(0, reviewComments.length - 1)],
+      })
+    }
+  }
+
+  await Review.insertMany(reviewDocs)
+  console.log(`Created ${reviewDocs.length} reviews across ${activeProducts.length} active products`)
+
+  // Seed delivered orders matching every (reviewer, product) review pair
+  const orderDocs = reviewDocs.map(({ user, product }) => {
+    const prod = products.find((p) =>
+      (p._id as mongoose.Types.ObjectId).equals(product)
+    )!
+    return {
+      user,
+      items: [{ product, name: prod.name, image: prod.images[0] ?? '', price: prod.price, quantity: 1 }],
+      shippingAddress: { fullName: 'Seed User', address: '1 Test St', city: 'Testville', postalCode: '00000', country: 'US' },
+      paymentStatus: 'paid',
+      orderStatus: 'delivered',
+      itemsPrice: prod.price,
+      shippingPrice: 0,
+      taxPrice: 0,
+      totalPrice: prod.price,
+    }
+  })
+  await Order.insertMany(orderDocs)
+  console.log(`Created ${orderDocs.length} delivered orders for seeded reviews`)
+
+  // Give every test user delivered orders for 2 products they haven't reviewed yet,
+  // so the review form is usable for all test accounts.
+  const reviewedSet = new Set(reviewDocs.map((r) => `${r.user}-${r.product}`))
+  const allTestUsers = [customerUser, ...extraReviewers]
+
+  const demoOrderDocs = allTestUsers.flatMap((u) => {
+    const uid = u._id as mongoose.Types.ObjectId
+    return activeProducts
+      .filter((p) => !reviewedSet.has(`${uid}-${p._id}`))
+      .slice(0, 2)
+      .map((prod) => ({
+        user: uid,
+        items: [{ product: prod._id as mongoose.Types.ObjectId, name: prod.name, image: prod.images[0] ?? '', price: prod.price, quantity: 1 }],
+        shippingAddress: { fullName: u.name, address: '1 Main St', city: 'Testville', postalCode: '00000', country: 'US' },
+        paymentStatus: 'paid' as const,
+        orderStatus: 'delivered' as const,
+        itemsPrice: prod.price,
+        shippingPrice: 0,
+        taxPrice: 0,
+        totalPrice: prod.price,
+      }))
+  })
+  await Order.insertMany(demoOrderDocs)
+  console.log(`Created ${demoOrderDocs.length} demo delivered orders (2 per test user for review form)`)
+
+  // Recalculate product ratings from seeded reviews
+  for (const product of activeProducts) {
+    const agg = await Review.aggregate([
+      { $match: { product: product._id } },
+      { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ])
+    if (agg.length > 0) {
+      await Product.findByIdAndUpdate(product._id, {
+        rating: Math.round(agg[0].avgRating * 10) / 10,
+        numReviews: agg[0].count,
+      })
+    }
+  }
+  console.log('Recalculated product ratings from seeded reviews')
+
   // Summary
   const inactive = products.filter((p) => !p.isActive)
   const outOfStock = products.filter((p) => p.stock === 0)
@@ -456,6 +573,8 @@ const seed = async () => {
   console.log(`  Users:        ${await User.countDocuments()}`)
   console.log(`  Categories:   ${await Category.countDocuments()}`)
   console.log(`  Products:     ${await Product.countDocuments()}`)
+  console.log(`  Reviews:      ${await Review.countDocuments()}`)
+  console.log(`  Orders:       ${await Order.countDocuments()}`)
   console.log(`    → active:       ${products.length - inactive.length}`)
   console.log(`    → inactive:     ${inactive.length}  (${inactive.map((p) => p.name).join(', ')})`)
   console.log(`    → out of stock: ${outOfStock.length}  (${outOfStock.map((p) => p.name).join(', ')})`)

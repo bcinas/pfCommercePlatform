@@ -13,10 +13,23 @@ const CATEGORY_GRADIENTS = [
   'from-orange-400 to-amber-500',
   'from-rose-500 to-pink-600',
   'from-violet-500 to-purple-600',
+  'from-cyan-500 to-blue-600',
+  'from-fuchsia-500 to-violet-600',
+  'from-lime-500 to-emerald-600',
+  'from-red-500 to-rose-600',
+  'from-yellow-400 to-orange-500',
 ];
 
-function CategoryCard({ category, index }: { category: ICategory; index: number }) {
-  const gradient = CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length];
+function hashGradient(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return CATEGORY_GRADIENTS[hash % CATEGORY_GRADIENTS.length];
+}
+
+function CategoryCard({ category }: { category: ICategory }) {
+  const gradient = hashGradient(category._id);
   const imageUrl = category.image ? `${BACKEND_URL}${category.image}` : null;
 
   return (
@@ -81,8 +94,8 @@ export default function CategoriesPage() {
           ? Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-40 bg-gray-200 rounded-2xl animate-pulse" />
             ))
-          : categories.map((category, index) => (
-              <CategoryCard key={category._id} category={category} index={index} />
+          : categories.map((category) => (
+              <CategoryCard key={category._id} category={category} />
             ))}
       </div>
     </div>

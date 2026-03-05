@@ -14,12 +14,25 @@ const CATEGORY_GRADIENTS = [
   'from-orange-400 to-amber-500',
   'from-rose-500 to-pink-600',
   'from-violet-500 to-purple-600',
+  'from-cyan-500 to-blue-600',
+  'from-fuchsia-500 to-violet-600',
+  'from-lime-500 to-emerald-600',
+  'from-red-500 to-rose-600',
+  'from-yellow-400 to-orange-500',
 ];
+
+function hashGradient(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return CATEGORY_GRADIENTS[hash % CATEGORY_GRADIENTS.length];
+}
 
 // ─── Category Card ────────────────────────────────────────────────────────────
 
-function CategoryCard({ category, index }: { category: ICategory; index: number }) {
-  const gradient = CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length];
+function CategoryCard({ category }: { category: ICategory }) {
+  const gradient = hashGradient(category._id);
   const imageUrl = category.image ? `${BACKEND_URL}${category.image}` : null;
 
   return (
@@ -229,8 +242,8 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {categories.map((category, i) => (
-              <CategoryCard key={category._id} category={category} index={i} />
+            {categories.map((category) => (
+              <CategoryCard key={category._id} category={category} />
             ))}
           </div>
         )}

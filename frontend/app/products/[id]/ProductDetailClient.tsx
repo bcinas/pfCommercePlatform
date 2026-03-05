@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { IProduct, IReview } from '@/app/types';
 import { useCart } from '@/app/context/CartContext';
+import { useAuth } from '@/app/context/AuthContext';
+import { createReview, fetchMyOrders } from '@/app/lib/api';
 
 const BACKEND_URL = 'http://localhost:5000';
 const STAR_PATH =
@@ -32,11 +34,94 @@ interface Props {
   reviews: IReview[];
 }
 
+function StarPicker({
+  value,
+  hover,
+  onHover,
+  onLeave,
+  onClick,
+}: {
+  value: number;
+  hover: number;
+  onHover: (n: number) => void;
+  onLeave: () => void;
+  onClick: (n: number) => void;
+}) {
+  const active = hover || value;
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onMouseEnter={() => onHover(star)}
+          onMouseLeave={onLeave}
+          onClick={() => onClick(star)}
+          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+          aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+        >
+          <svg
+            className={`w-7 h-7 transition-colors ${star <= active ? 'text-amber-400' : 'text-gray-200'}`}
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path d={STAR_PATH} />
+          </svg>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ProductDetailClient({ product, reviews }: Props) {
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const images = product.images.length > 0 ? product.images : [];
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
+  const [reviewsList, setReviewsList] = useState<IReview[]>(reviews);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [eligible, setEligible] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setEligible(false); return; }
+    fetchMyOrders(user.token).then((orders) => {
+      setEligible(
+        orders.some(
+          (o) => o.orderStatus === 'delivered' &&
+                 o.items.some((item) => item.product === product._id)
+        )
+      );
+    }).catch(() => setEligible(false));
+  }, [user]);
+
+  async function handleReviewSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    if (rating === 0) {
+      setFormError('Please select a star rating.');
+      return;
+    }
+    if (!comment.trim()) {
+      setFormError('Please enter a comment.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const newReview = await createReview(product._id, rating, comment, user!.token);
+      setReviewsList((prev) => [newReview, ...prev]);
+      setSubmitted(true);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to submit review');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   const categoryName =
     typeof product.category === 'string' ? null : product.category.name;
@@ -234,14 +319,70 @@ export default function ProductDetailClient({ product, reviews }: Props) {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 lg:p-8">
         <h2 className="text-lg font-bold text-gray-900 mb-5">
           Customer Reviews
-          {reviews.length > 0 && (
+          {reviewsList.length > 0 && (
             <span className="ml-2 text-sm font-normal text-gray-400">
-              ({reviews.length})
+              ({reviewsList.length})
             </span>
           )}
         </h2>
 
-        {reviews.length === 0 ? (
+        {/* Review form */}
+        <div className="mb-6 pb-6 border-b border-gray-100">
+          {!user ? (
+            <p className="text-sm text-gray-500">
+              <a href="/login" className="text-indigo-600 font-medium hover:underline">Log in</a> to leave a review
+            </p>
+          ) : !eligible ? (
+            <p className="text-sm text-gray-400">
+              Only verified purchasers with a delivered order can leave a review.
+            </p>
+          ) : submitted ? (
+            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 text-sm font-medium px-4 py-3 rounded-lg">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Thanks for your review!
+            </div>
+          ) : (
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Your rating</label>
+                <StarPicker
+                  value={rating}
+                  hover={hoverRating}
+                  onHover={setHoverRating}
+                  onLeave={() => setHoverRating(0)}
+                  onClick={setRating}
+                />
+              </div>
+              <div>
+                <label htmlFor="review-comment" className="block text-sm font-medium text-gray-700 mb-2">
+                  Your comment
+                </label>
+                <textarea
+                  id="review-comment"
+                  rows={3}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Share your experience with this product…"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+              </div>
+              {formError && (
+                <p className="text-sm text-red-600">{formError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+              >
+                {submitting ? 'Submitting…' : 'Submit Review'}
+              </button>
+            </form>
+          )}
+        </div>
+
+        {reviewsList.length === 0 ? (
           <div className="text-center py-10 text-gray-400">
             <svg className="w-10 h-10 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -251,7 +392,7 @@ export default function ProductDetailClient({ product, reviews }: Props) {
           </div>
         ) : (
           <div className="space-y-5">
-            {reviews.map((review) => (
+            {reviewsList.map((review) => (
               <div key={review._id} className="border-b border-gray-100 last:border-0 pb-5 last:pb-0">
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div>
