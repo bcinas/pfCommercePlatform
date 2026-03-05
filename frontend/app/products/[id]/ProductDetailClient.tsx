@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { IProduct, IReview } from '@/app/types';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
@@ -87,6 +87,7 @@ export default function ProductDetailClient({ product, reviews }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [eligible, setEligible] = useState(false);
+  const formErrorRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (!user) { setEligible(false); return; }
@@ -117,7 +118,9 @@ export default function ProductDetailClient({ product, reviews }: Props) {
       setReviewsList((prev) => [newReview, ...prev]);
       setSubmitted(true);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to submit review');
+      const msg = err instanceof Error ? err.message : 'Failed to submit review';
+      setFormError(msg);
+      setTimeout(() => formErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
     } finally {
       setSubmitting(false);
     }
@@ -369,7 +372,7 @@ export default function ProductDetailClient({ product, reviews }: Props) {
                 />
               </div>
               {formError && (
-                <p className="text-sm text-red-600">{formError}</p>
+                <p ref={formErrorRef} className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError}</p>
               )}
               <button
                 type="submit"

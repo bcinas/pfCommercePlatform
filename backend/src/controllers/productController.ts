@@ -175,8 +175,12 @@ export const createReview = async (req: AuthRequest, res: Response) => {
       })
     }
 
-    const populated = await review.populate('user', 'name')
-    return res.status(201).json(populated)
+    try {
+      await review.populate('user', 'name')
+    } catch {
+      // populate failure is non-fatal — the review is already saved
+    }
+    return res.status(201).json(review)
   } catch (error) {
     res.status(500).json({ message: 'Server error' })
   }

@@ -19,9 +19,10 @@ interface ShippingAddressInput {
 // POST /api/orders — protected customer
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
-    const { items, shippingAddress } = req.body as {
+    const { items, shippingAddress, paymentStatus } = req.body as {
       items: OrderItemInput[]
       shippingAddress: ShippingAddressInput
+      paymentStatus?: 'pending' | 'paid'
     }
 
     if (!items || items.length === 0) {
@@ -64,6 +65,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       shippingPrice,
       taxPrice,
       totalPrice,
+      ...(paymentStatus === 'paid' ? { paymentStatus: 'paid' } : {}),
     })
 
     res.status(201).json(order)

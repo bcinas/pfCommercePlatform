@@ -111,7 +111,7 @@ export default function CheckoutPage() {
         quantity: i.quantity,
       }));
 
-      const order = await createOrder(user.token, orderItems, form);
+      const order = await createOrder(user.token, orderItems, form, 'paid');
       setOrderPlaced(true);
       clearCart();
       router.push(`/orders/${order._id}`);

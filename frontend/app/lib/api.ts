@@ -51,12 +51,13 @@ function authHeaders(token: string): HeadersInit {
 export async function createOrder(
   token: string,
   items: OrderItemInput[],
-  shippingAddress: IShippingAddress
+  shippingAddress: IShippingAddress,
+  paymentStatus: 'pending' | 'paid' = 'pending'
 ): Promise<IOrder> {
   const res = await fetch(`${BASE_URL}/orders`, {
     method: 'POST',
     headers: authHeaders(token),
-    body: JSON.stringify({ items, shippingAddress }),
+    body: JSON.stringify({ items, shippingAddress, paymentStatus }),
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };
