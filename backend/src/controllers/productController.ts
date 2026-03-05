@@ -71,7 +71,8 @@ export const getProductById = async (req: Request, res: Response) => {
 // POST /api/products — admin only
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const product = await Product.create(req.body)
+    const { name, description, price, images, category, stock, isActive, specifications } = req.body
+    const product = await Product.create({ name, description, price, images, category, stock, isActive, specifications })
     res.status(201).json(product)
   } catch (error) {
     res.status(500).json({ message: 'Server error' })
@@ -81,10 +82,12 @@ export const createProduct = async (req: Request, res: Response) => {
 // PUT /api/products/:id — admin only
 export const updateProduct = async (req: Request, res: Response) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    })
+    const { name, description, price, images, category, stock, isActive, specifications } = req.body
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { name, description, price, images, category, stock, isActive, specifications },
+      { new: true, runValidators: true }
+    )
     if (!product) {
       return res.status(404).json({ message: 'Product not found' })
     }
