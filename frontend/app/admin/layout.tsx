@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/app/context/AuthContext';
-import { LayoutDashboard, ShoppingBag, Package, Tag, LogOut } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Package, Tag, LogOut, Store } from 'lucide-react';
 
 const NAV_LINKS = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -85,12 +85,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* User + Logout */}
+        {/* User + Actions */}
         <div className="px-3 py-4 border-t border-gray-800">
-          <div className="px-3 py-2 mb-1">
+          <div className="px-3 py-2 mb-2">
             <p className="text-white text-sm font-medium truncate">{user.name}</p>
             <p className="text-gray-400 text-xs truncate">{user.email}</p>
           </div>
+          <Link
+            href="/"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors mb-1"
+          >
+            <Store className="w-4 h-4 shrink-0" />
+            View Store
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
