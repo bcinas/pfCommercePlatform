@@ -180,10 +180,13 @@ export const getAllProducts = async (req: AuthRequest, res: Response) => {
 
     if (category) filter.category = category
     if (isActive !== undefined) filter.isActive = isActive === 'true'
-    if (search) filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
-    ]
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      filter.$or = [
+        { name: { $regex: escaped, $options: 'i' } },
+        { description: { $regex: escaped, $options: 'i' } },
+      ]
+    }
 
     const sortMap: Record<string, Record<string, SortOrder>> = {
       price_asc:  { price: 1 },
