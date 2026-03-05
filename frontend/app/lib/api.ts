@@ -108,7 +108,7 @@ export async function cancelOrder(token: string, id: string): Promise<IOrder> {
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };
-    throw new Error(body.message ?? 'Failed to cancel order');
+    throw new Error(body.message ?? `Request failed with status ${res.status}`);
   }
   return res.json() as Promise<IOrder>;
 }

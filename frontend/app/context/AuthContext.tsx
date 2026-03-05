@@ -14,12 +14,12 @@ export interface AuthUser {
 
 interface AuthContextValue {
   user: AuthUser | null;
-  /** True only during the initial localStorage hydration on mount */
+  /** True only during the initial sessionStorage hydration on mount */
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  /** Call after a successful profile update to keep localStorage + state in sync */
+  /** Call after a successful profile update to keep sessionStorage + state in sync */
   updateUser: (updated: ApiAuthResponse) => void;
 }
 
@@ -44,16 +44,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Hydrate from localStorage after mount
+  // Hydrate from sessionStorage after mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as AuthUser;
         setUser(parsed);
       }
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.role,
       token: data.token,
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
     setUser(authUser);
   }
 
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
     setUser(null);
   }
 
