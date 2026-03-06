@@ -50,14 +50,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="fixed inset-0 z-[100] flex bg-gray-50">
       {/* ── Sidebar ── */}
-      <aside className="w-64 bg-gray-900 flex flex-col shrink-0 overflow-y-auto">
+      <aside className="w-14 md:w-64 bg-gray-900 flex flex-col shrink-0 overflow-y-auto">
         {/* Logo */}
-        <div className="px-4 py-5 border-b border-gray-800">
+        <div className="px-2 md:px-4 py-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
               PF
             </div>
-            <div>
+            <div className="hidden md:block">
               <p className="text-white font-semibold text-sm leading-tight">PF Commerce</p>
               <p className="text-gray-400 text-xs">Admin Panel</p>
             </div>
@@ -65,45 +65,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-2 md:px-3 py-4 space-y-1">
           {NAV_LINKS.map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href;
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                title={label}
+                className={`flex items-center gap-3 px-2 md:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
-                {label}
+                <span className="hidden md:inline">{label}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* User + Actions */}
-        <div className="px-3 py-4 border-t border-gray-800">
-          <div className="px-3 py-2 mb-2">
+        <div className="px-2 md:px-3 py-4 border-t border-gray-800">
+          <div className="hidden md:block px-3 py-2 mb-2">
             <p className="text-white text-sm font-medium truncate">{user.name}</p>
             <p className="text-gray-400 text-xs truncate">{user.email}</p>
           </div>
           <Link
             href="/"
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors mb-1"
+            title="View Store"
+            className="flex items-center gap-3 w-full px-2 md:px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors mb-1"
           >
             <Store className="w-4 h-4 shrink-0" />
-            View Store
+            <span className="hidden md:inline">View Store</span>
           </Link>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+            title="Logout"
+            className="flex items-center gap-3 w-full px-2 md:px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            Logout
+            <span className="hidden md:inline">Logout</span>
           </button>
         </div>
       </aside>

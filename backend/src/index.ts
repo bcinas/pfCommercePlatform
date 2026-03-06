@@ -13,7 +13,11 @@ dotenv.config()
 const app = express()
 
 // Middleware
-app.use(cors())
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : ['http://localhost:3000']
+
+app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 
 // Test route
