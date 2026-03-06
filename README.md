@@ -81,6 +81,8 @@ Create `backend/.env`:
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/pfcommerce
 JWT_SECRET=your_super_secret_key_change_this
+# Optional: comma-separated list of allowed origins (defaults to http://localhost:3000)
+# CORS_ORIGIN=https://your-frontend-domain.com
 ```
 
 > **Important:** Change `JWT_SECRET` to a long random string before any deployment.
@@ -407,7 +409,7 @@ npm start       # starts production server on port 3000
 - Set `JWT_SECRET` to a strong, randomly generated value (32+ characters)
 - Set `MONGO_URI` to your production MongoDB connection string (e.g. MongoDB Atlas)
 - Update the API base URL in `frontend/app/lib/api.ts` to point to the production backend, or introduce `NEXT_PUBLIC_API_URL` as an environment variable and read it there
-- Ensure CORS in `backend/src/index.ts` allows your production frontend origin
+- Set `CORS_ORIGIN` to your production frontend URL (e.g. `https://your-app.vercel.app`); defaults to `http://localhost:3000`
 
 ---
 
