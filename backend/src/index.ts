@@ -1,38 +1,9 @@
-import express from 'express'
 import mongoose from 'mongoose'
-import cors from 'cors'
 import dotenv from 'dotenv'
-import authRoutes from './routes/authRoutes'
-import categoryRoutes from './routes/categoryRoutes'
-import productRoutes from './routes/productRoutes'
-import orderRoutes from './routes/orderRoutes'
-import adminRoutes from './routes/adminRoutes'
+import app from './app'
 
 dotenv.config()
 
-const app = express()
-
-// Middleware
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:3000']
-
-app.use(cors({ origin: allowedOrigins }))
-app.use(express.json())
-
-// Test route
-app.get('/', (_req, res) => {
-  res.json({ message: 'API is running' })
-})
-
-// Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/categories', categoryRoutes)
-app.use('/api/products', productRoutes)
-app.use('/api/orders', orderRoutes)
-app.use('/api/admin', adminRoutes)
-
-// Database connection
 const PORT = process.env.PORT || 5000
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/pfcommerce'
 

@@ -136,6 +136,44 @@ The seeder drops the existing database, then inserts fresh data. Run this once b
 
 ---
 
+## Testing
+
+The project has three test layers: unit/integration tests for the backend, component/integration tests for the frontend, and end-to-end tests via Playwright.
+
+### Backend Tests
+
+Backend tests cover middleware, Mongoose models, and all API routes using Jest + ts-jest + supertest. Tests run against an in-memory MongoDB instance (MongoMemoryServer), so no local MongoDB installation is required.
+
+    cd backend
+    npm test                # run all tests
+    npm run test:coverage   # run with coverage report (80% branches / 85% lines threshold)
+    npm run test:watch      # watch mode
+
+### Frontend Tests
+
+Frontend tests cover React components, context providers, and the API client using Jest + React Testing Library.
+
+    cd frontend
+    npm test                # run all tests
+    npm run test:coverage   # run with coverage report (80% branches / 85% lines threshold)
+    npm run test:watch      # watch mode
+
+### E2E Tests
+
+End-to-end tests exercise full user flows (auth, shopping, checkout, reviews, admin) in Chromium via Playwright. Both the backend and frontend dev servers must be running, and the database must be seeded.
+
+    # Terminal 1 — seed and start backend
+    cd backend && npm run seed && npm run dev
+
+    # Terminal 2 — start frontend
+    cd frontend && npm run dev
+
+    # Terminal 3 — from project root
+    npm run test:e2e        # headless
+    npm run test:e2e:ui     # interactive UI mode
+
+---
+
 ## Demo Credentials
 
 | Role | Email | Password |
